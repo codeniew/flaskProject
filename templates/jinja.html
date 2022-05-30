@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta  charset="UFT-8" ><meta>
+    <title>微博热搜</title>
+</head>
+<body>
+    <h1>网上在热议什么？</h1>
+
+    <div style="display:inline-block">
+        <ol id="navigation">
+    {% for item in navigation %}
+        <li><a target="_blank" rel="noopener noreferrer" href="{{ item.href }}  ">{{ item.caption }}</a></li>
+    {% endfor %}
+        </ol>
+    </div>
+
+    <div style="display:inline-block ">
+        <ol id="navigation2">
+    {% for item in navigation2 %}
+        <li><a target="_blank" rel="noopener noreferrer" href="{{ item.href }}  ">{{ item.caption }}</a></li>
+    {% endfor %}
+        </ol>
+    </div>
+
+
+    {{ a_variable }}
+
+    {# a comment #}
+</body>
+</html>
