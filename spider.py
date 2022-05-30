@@ -31,8 +31,8 @@ def getHTML(url):
     response = requests.get(url, headers=headers)
     response.encoding = 'utf-8'
     print(response.text)
-    with open('test.html', 'w') as f:
-        f.write(response.text)
+    # with open('test.html', 'w') as f:
+    #     f.write(response.text)
     return response.text
 
 
