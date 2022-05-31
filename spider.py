@@ -1,11 +1,8 @@
-from datetime import datetime
 import json
 import os
-import re
-
+from datetime import datetime
 from lxml import etree
 import requests
-
 import utils
 
 BASE_URL = 'https://s.weibo.com'
@@ -14,9 +11,50 @@ ARCHIVE_DIR = './archives'
 
 BAIDU_BASE_URL = 'https://top.baidu.com'
 BAIDU_JSON_DIR = './raw/baidu'
+ZHIHU_JSON_DIR = './raw/zhihu'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' \
+             'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 ' \
+             'Safari/537.36 '
+COOKIE = 'SUB=_2AkMVWDYUf8NxqwJRmP0Sz2_hZYt2zw_EieKjBMfPJ' \
+         'RMxHRl-yj9jqkBStRB6PtgY-38i0AF7nDAv8HdY1ZwT3Rv8B5e5; ' \
+         'SUBP=0033WrSXqPxfM72-Ws9jqgMF55529P9D9WFencmWZyNhNlrzI6f0SiqP '
 
 
-def getHTML(url):
+def get_zhihu_html(url):
+    """ 获取网页 HTML 返回字符串
+    Args:
+        url: str, 网页网址
+    Returns:
+        HTML 字符串
+    """
+    headers = {'User-Agent': USER_AGENT}
+    response = requests.get(url, headers=headers)
+    return response.text
+
+
+def process_zhihu_html(content):
+    """ 使用 xpath 解析 HTML, 提取榜单信息
+
+    Args:
+        content: str, 待解析的 HTML 字符串
+    Returns:
+        榜单信息的字典 字典(为了更容易写成json)
+    """
+    html = etree.HTML(content)
+
+    script = html.xpath('//script[@id="js-initialData"]/text()')[0]
+    items = json.loads(script)['initialState']['topstory']['hotList']
+    rank = {
+        item['target']['titleArea']['text']: {
+            'hrefs': item['target']['link']['url'],
+            'hot': item['target']['metricsArea']['text'],
+        }
+        for item in items
+    }
+    return rank
+
+
+def get_baidu_html(url):
     """ 获取网页 HTML 返回字符串
 
     Args:
@@ -24,20 +62,14 @@ def getHTML(url):
     Returns:
         HTML 字符串
     """
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/84.0.4147.125 Safari/537.36 '
-    }
+    headers = {'User-Agent': USER_AGENT}
     response = requests.get(url, headers=headers)
     response.encoding = 'utf-8'
-    print(response.text)
-    # with open('test.html', 'w') as f:
-    #     f.write(response.text)
     return response.text
 
 
 # 使用 xpath 解析 HTML
-def parseHTMLByXPath(content):
+def process_baidu_html(content):
     """ 使用 xpath 解析 HTML, 提取榜单信息
 
     Args:
@@ -46,23 +78,21 @@ def parseHTMLByXPath(content):
         榜单信息的字典 字典
     """
     html = etree.HTML(content)
-
-    titles = html.xpath('//html/body/div/div/main/div[2]/div/div[2]/div[position()>1]/div[2]/a/div[1]/text()')
-    print(titles)
-    print(len(titles))
-    hrefs = html.xpath('//html/body/div/div/main/div[2]/div/div[2]/div[position()>1]/div[2]/a/@href')
-    print(hrefs)
-    hots = html.xpath('//html/body/div/div/main/div[2]/div/div[2]/div[position()>1]/div[1]/div[2]/text()')
+    titles = html.xpath('//html/body/div/div/main/div[2]/div/div[2]'
+                        '/div[position()>1]/div[2]/a/div[1]/text()')
+    hrefs = html.xpath('//html/body/div/div/main/div[2]/div/div[2]'
+                       '/div[position()>1]/div[2]/a/@href')
+    hots = html.xpath('//html/body/div/div/main/div[2]/div/div[2]'
+                      '/div[position()>1]/div[1]/div[2]/text()')
     print(hots)
     titles = [title.strip() for title in titles]
     hrefs = [href.strip() for href in hrefs]
     hots = [int(hot.strip()) for hot in hots]
-
-    correntRank = {}
+    rank = {}
     for i, title in enumerate(titles):
-        correntRank[title] = {'href': hrefs[i], 'hot': hots[i]}
-    print(correntRank)
-    return correntRank
+        rank[title] = {'href': hrefs[i], 'hot': hots[i]}
+    print(rank)
+    return rank
 
 
 def get_html(url):
@@ -75,14 +105,10 @@ def get_html(url):
     """
     # Cookie 有效期至2023-02-10
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/84.0.4147.125 Safari/537.36',
-        'Cookie': 'SUB=_2AkMVWDYUf8NxqwJRmP0Sz2_hZYt2zw_EieKjBMfPJRMxHRl-yj9jqkBStRB6PtgY-38i0AF7nDAv8HdY1ZwT3Rv8B5e5'
-                  '; SUBP=0033WrSXqPxfM72-Ws9jqgMF55529P9D9WFencmWZyNhNlrzI6f0SiqP '
-    }
+        'User-Agent': USER_AGENT,
+        'Cookie': COOKIE}
     response = requests.get(url, headers=headers)
-    if response.encoding == 'ISO-8859-1':
-        response.encoding = response.apparent_encoding if response.apparent_encoding != 'ISO-8859-1' else 'utf-8'
+    response.encoding = 'utf-8'
     return response.text
 
 
@@ -96,13 +122,15 @@ def process_html(content):
         榜单信息的字典 字典
     """
     html = etree.HTML(content)
-
     titles = html.xpath(
-        '//tr[position()>1]/td[@class="td-02"]/a[not(contains(@href, "javascript:void(0);"))]/text()')
+        '//tr[position()>1]/td[@class="td-02"]'
+        '/a[not(contains(@href, "javascript:void(0);"))]/text()')
     hrefs = html.xpath(
-        '//tr[position()>1]/td[@class="td-02"]/a[not(contains(@href, "javascript:void(0);"))]/@href')
+        '//tr[position()>1]/td[@class="td-02"]'
+        '/a[not(contains(@href, "javascript:void(0);"))]/@href')
     hots = html.xpath(
-        '//tr[position()>1]/td[@class="td-02"]/a[not(contains(@href, "javascript:void(0);"))]/../span/text()')
+        '//tr[position()>1]/td[@class="td-02"]'
+        '/a[not(contains(@href, "javascript:void(0);"))]/../span/text()')
     titles = [title.strip() for title in titles]
     hrefs = [BASE_URL + href.strip() for href in hrefs]
     hots = [int(hot.strip().split(' ')[-1])
@@ -144,47 +172,31 @@ def update_json(json_dir, hot_data):
             history_data[k] = v
 
     # 将榜单按 hot 值排序
-    rank = {k: v for k, v in sorted(
-        history_data.items(), key=lambda item: item[1]['hot'], reverse=True)}
+
+    if json_dir == './raw/zhihu':
+        rank = {k: v for k, v in
+                sorted(history_data.items(), key=lambda item: int(item[1]['hot'].split()[0]), reverse=True)}
+    else:
+        rank = {k: v for k, v in sorted(history_data.items(), key=lambda item: item[1]['hot'], reverse=True)}
 
     # 更新当天榜单 json 文件
     utils.save(file_name, rank)
     return rank
 
 
-# def updateReadme(rank):
-#     """ 更新 README.md
-#
-#     Args:
-#         rank: dict, 榜单信息
-#     Returns:
-#         None
-#     """
-#     filename = './README.md'
-#
-#     line = '1. [{title}]({href}) {hot}'
-#     lines = [line.format(title=k, hot=v['hot'], href=v['href'])
-#              for k, v in rank.items()]
-#     rank = '\n'.join(lines)
-#
-#     rank = '最后更新时间 {}\n\n'.format(
-#         datetime.now().strftime('%Y-%m-%d %X')) + rank
-#     rank = '<!-- Rank Begin -->\n\n' + rank + '\n<!-- Rank End -->'
-#
-#     content = re.sub(
-#         r'<!-- Rank Begin -->[\s\S]*<!-- Rank End -->', rank, utils.load(filename))
-#     utils.save(filename, content)
-
-
 def main():
-    content = get_html(BASE_URL + '/top/summary')
-    hot_data = process_html(content)
+    weibo_content = get_html(BASE_URL + '/top/summary')
+    hot_data = process_html(weibo_content)
     update_json(JSON_DIR, hot_data)
 
-    baidu_content = getHTML(BAIDU_BASE_URL + '/buzz?b=1')
-    baidu_hot_data = parseHTMLByXPath(baidu_content)
+    baidu_content = get_baidu_html(BAIDU_BASE_URL + '/buzz?b=1')
+    baidu_hot_data = process_baidu_html(baidu_content)
     update_json(BAIDU_JSON_DIR, baidu_hot_data)
     # updateReadme(hot_json)
+
+    zhihu_content = get_zhihu_html('https://www.zhihu.com/billboard')
+    zhihu_hot_data = process_zhihu_html(zhihu_content)
+    update_json(ZHIHU_JSON_DIR, zhihu_hot_data)
 
 
 if __name__ == '__main__':

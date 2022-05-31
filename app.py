@@ -36,6 +36,7 @@ def jinja():  # put application's code here
         print(key, value)
         mydict['caption'] = key
         mydict['href'] = value['href']
+        mydict['hot'] = value['hot']
         navigation.append(mydict)
 
     for key, value in data_baidu.items():
@@ -45,7 +46,7 @@ def jinja():  # put application's code here
         mydict['href'] = value['href']
         navigation2.append(mydict)
 
-    return render_template('jinja.html', navigation=navigation, navigation2=navigation2, a_variable='微博热搜')
+    return render_template('jinri.html', navigation=navigation)
 
 
 if __name__ == '__main__':
