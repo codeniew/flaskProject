@@ -1,9 +1,9 @@
+"""
+ flask 开始
+"""
 from datetime import date
-
 import json
-
 from flask import Flask, render_template
-
 import spider
 
 app = Flask(__name__)
@@ -11,42 +11,42 @@ app = Flask(__name__)
 
 @app.route('/')
 def hello_world():  # put application's code here
-    f = open('/home/nw/myPython/weibo-hot-search/raw/20220527.json')
-    return f.read()
-
-
-@app.route('/test')
-def test():  # put application's code here
-    return '跳转 test'
-
-
-@app.route('/jinja')
-def jinja():  # put application's code here
+    """
+    :return: 网络热议首页
+    """
     spider.main()
-    with open('./raw/weibo/'+date.today().strftime("%Y%m%d")+'.json', 'r') as f:
-        data_weibo = json.load(f)
-    with open('./raw/baidu/'+date.today().strftime("%Y%m%d")+'.json', 'r') as f:
-        data_baidu = json.load(f)
-    # print(data)
-
+    with open('./raw/weibo/' + date.today().strftime("%Y%m%d") + '.json', 'r', encoding='utf-8') \
+            as f_weibo:
+        data_weibo = json.load(f_weibo)
+    with open('./raw/baidu/' + date.today().strftime("%Y%m%d") + '.json', 'r', encoding='utf-8') \
+            as f_baidu:
+        data_baidu = json.load(f_baidu)
+    with open('./raw/zhihu/' + date.today().strftime("%Y%m%d") + '.json', 'r', encoding='utf-8') \
+            as f_zhihu:
+        data_zhihu = json.load(f_zhihu)
     navigation = []
     navigation2 = []
-    for key, value in data_weibo.items():
+    navigation_zhihu = []
+    navigation = json_to_list(data_weibo, navigation)
+    navigation2 = json_to_list(data_baidu, navigation2)
+    navigation_zhihu = json_to_list(data_zhihu, navigation_zhihu)
+    return render_template('jinri.html', navigation=navigation, navigation2=navigation2, navigation_zhihu=navigation_zhihu)
+
+
+def json_to_list(json_data, navigation):
+    """将系统里面的 json 转化为 list
+    :param json_data: json数据
+    :param navigation: 初始list
+    :return: new navigation
+    """
+    for key, value in json_data.items():
         mydict = {}
         print(key, value)
         mydict['caption'] = key
         mydict['href'] = value['href']
         mydict['hot'] = value['hot']
         navigation.append(mydict)
-
-    for key, value in data_baidu.items():
-        mydict = {}
-        print(key, value)
-        mydict['caption'] = key
-        mydict['href'] = value['href']
-        navigation2.append(mydict)
-
-    return render_template('jinri.html', navigation=navigation)
+    return navigation
 
 
 if __name__ == '__main__':

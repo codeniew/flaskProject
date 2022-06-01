@@ -1,3 +1,6 @@
+"""
+爬取 微博/知乎/百度 热搜
+"""
 import json
 import os
 from datetime import datetime
@@ -46,7 +49,7 @@ def process_zhihu_html(content):
     items = json.loads(script)['initialState']['topstory']['hotList']
     rank = {
         item['target']['titleArea']['text']: {
-            'hrefs': item['target']['link']['url'],
+            'href': item['target']['link']['url'],
             'hot': item['target']['metricsArea']['text'],
         }
         for item in items
@@ -84,14 +87,12 @@ def process_baidu_html(content):
                        '/div[position()>1]/div[2]/a/@href')
     hots = html.xpath('//html/body/div/div/main/div[2]/div/div[2]'
                       '/div[position()>1]/div[1]/div[2]/text()')
-    print(hots)
     titles = [title.strip() for title in titles]
     hrefs = [href.strip() for href in hrefs]
     hots = [int(hot.strip()) for hot in hots]
     rank = {}
     for i, title in enumerate(titles):
         rank[title] = {'href': hrefs[i], 'hot': hots[i]}
-    print(rank)
     return rank
 
 
@@ -162,22 +163,23 @@ def update_json(json_dir, hot_data):
         utils.save(file_name, {})
 
     history_data = json.loads(utils.load(file_name))
-    for k, v in hot_data.items():
+    for k, value in hot_data.items():
         # 若当前榜单和历史榜单有重复的，取热度数值(名称后面的数值)更大的一个
         if k in history_data:
             history_data[k]['hot'] = max(
                 history_data[k]['hot'], hot_data[k]['hot'])
         # 若没有，则添加
         else:
-            history_data[k] = v
+            history_data[k] = value
 
     # 将榜单按 hot 值排序
 
     if json_dir == './raw/zhihu':
-        rank = {k: v for k, v in
-                sorted(history_data.items(), key=lambda item: int(item[1]['hot'].split()[0]), reverse=True)}
+        rank = dict(sorted(history_data.items(),
+                           key=lambda item: int(item[1]['hot'].split()[0]), reverse=True))
     else:
-        rank = {k: v for k, v in sorted(history_data.items(), key=lambda item: item[1]['hot'], reverse=True)}
+        rank = dict(sorted(history_data.items(),
+                           key=lambda item: item[1]['hot'], reverse=True))
 
     # 更新当天榜单 json 文件
     utils.save(file_name, rank)
@@ -185,6 +187,9 @@ def update_json(json_dir, hot_data):
 
 
 def main():
+    """
+    :return: 生成并更新微博/百度/知乎json文件
+    """
     weibo_content = get_html(BASE_URL + '/top/summary')
     hot_data = process_html(weibo_content)
     update_json(JSON_DIR, hot_data)
@@ -192,7 +197,6 @@ def main():
     baidu_content = get_baidu_html(BAIDU_BASE_URL + '/buzz?b=1')
     baidu_hot_data = process_baidu_html(baidu_content)
     update_json(BAIDU_JSON_DIR, baidu_hot_data)
-    # updateReadme(hot_json)
 
     zhihu_content = get_zhihu_html('https://www.zhihu.com/billboard')
     zhihu_hot_data = process_zhihu_html(zhihu_content)
