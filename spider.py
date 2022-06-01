@@ -202,6 +202,8 @@ def main():
     zhihu_hot_data = process_zhihu_html(zhihu_content)
     update_json(ZHIHU_JSON_DIR, zhihu_hot_data)
 
+    print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "文件更新成功")
+
 
 if __name__ == '__main__':
     main()
