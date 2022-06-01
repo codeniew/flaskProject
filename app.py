@@ -40,12 +40,8 @@ def json_to_list(json_data, navigation):
     :return: new navigation
     """
     for key, value in json_data.items():
-        mydict = {}
-        print(key, value)
-        mydict['caption'] = key
-        mydict['href'] = value['href']
-        mydict['hot'] = value['hot']
-        navigation.append(mydict)
+        my_dict = {'caption': key, 'href': value['href'], 'hot': value['hot']}
+        navigation.append(my_dict)
     return navigation
 
 

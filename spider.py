@@ -10,8 +10,6 @@ import utils
 
 BASE_URL = 'https://s.weibo.com'
 JSON_DIR = './raw/weibo'
-ARCHIVE_DIR = './archives'
-
 BAIDU_BASE_URL = 'https://top.baidu.com'
 BAIDU_JSON_DIR = './raw/baidu'
 ZHIHU_JSON_DIR = './raw/zhihu'
