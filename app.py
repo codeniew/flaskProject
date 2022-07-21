@@ -30,7 +30,10 @@ def hello_world():  # put application's code here
     navigation = json_to_list(data_weibo, navigation)
     navigation2 = json_to_list(data_baidu, navigation2)
     navigation_zhihu = json_to_list(data_zhihu, navigation_zhihu)
-    return render_template('jinri.html', navigation=navigation, navigation2=navigation2, navigation_zhihu=navigation_zhihu)
+    return render_template('jinri.html',
+                           navigation=navigation,
+                           navigation2=navigation2,
+                           navigation_zhihu=navigation_zhihu)
 
 
 def json_to_list(json_data, navigation):

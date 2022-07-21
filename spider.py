@@ -170,17 +170,26 @@ def update_json(json_dir, hot_data):
         else:
             history_data[k] = value
 
-    # 将榜单按 hot 值排序
+    rank = hot_sort(json_dir=json_dir,history_data=history_data)
 
+    # 更新当天榜单 json 文件
+    utils.save(file_name, rank)
+    return rank
+
+
+def hot_sort(json_dir, history_data):
+    """
+    热搜排序
+    :param json_dir:文件地址
+    :param history_data: 热搜json文件
+    :return: 排序后的json
+    """
     if json_dir == './raw/zhihu':
         rank = dict(sorted(history_data.items(),
                            key=lambda item: int(item[1]['hot'].split()[0]), reverse=True))
     else:
         rank = dict(sorted(history_data.items(),
                            key=lambda item: item[1]['hot'], reverse=True))
-
-    # 更新当天榜单 json 文件
-    utils.save(file_name, rank)
     return rank
 
 
